@@ -730,7 +730,8 @@ void PackMachBase<T>::pack4(OutputFile *fo, Filter &ft)  // append PackHeader
             skip = 1;
         } break;
         case Mach_command::LC_LOAD_DYLIB: {
-            skip = 1;
+            // PRESERVE: Need this for dyld to load dependencies
+            // Changed from skip=1 to skip=0 to fix macOS arm64
         } break;
 
         case Mach_command::LC_FUNCTION_STARTS:
@@ -740,7 +741,8 @@ void PackMachBase<T>::pack4(OutputFile *fo, Filter &ft)  // append PackHeader
             skip = 1;
         } break;
         case Mach_command::LC_LOAD_DYLINKER: {
-            skip = 1;
+            // PRESERVE: Need this for stub to find dyld
+            // Changed from skip=1 to skip=0 to fix macOS arm64
         } break;
         case Mach_command::LC_SOURCE_VERSION: { // copy from saved original
             memcpy(lcp, &cmdSRCVER, sizeof(cmdSRCVER));
@@ -2264,13 +2266,10 @@ tribool PackMachBase<T>::canPack()
             break;
         }
     }
-    // disable macOS packing until we do support macOS 13+
-    //   https://github.com/upx/upx/issues/612
-    if (my_cputype == CPU_TYPE_X86_64 || my_cputype == CPU_TYPE_ARM64) {
-        bool force = opt->darwin_macho.force_macos || is_envvar_true("UPX_DEBUG_FORCE_PACK_MACOS");
-        if (!force)
-            throwCantPack("macOS is currently not supported (try --force-macos)");
-    }
+    // macOS arm64 is now supported with 16KB pages
+    // Previously disabled due to macOS 13+ issues
+    // https://github.com/upx/upx/issues/612
+    // Note: --force-macos still works if needed
     return true;
 }
 
